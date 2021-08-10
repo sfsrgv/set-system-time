@@ -3,19 +3,19 @@
 #include <curl/curl.h>
 #include <sstream>
 #include <algorithm>
-#include <fstream>
 #include <cstdio>
 #include <ctime>
 #include <unordered_map>
+#include <thread>
+#include <fstream>
 
-
-const std::unordered_map<std::string, int> WDAYS_TO_NUMBER = {{"Mon",  0},
-                                                              {"Thu",  1},
-                                                              {"Wed",  2},
-                                                              {"Thur", 3},
-                                                              {"Fri",  4},
-                                                              {"Sat",  5},
-                                                              {"Sun",  6}};
+const std::unordered_map<std::string, int> WDAYS_TO_NUMBER = {{"Mon", 0},
+                                                              {"Tue", 1},
+                                                              {"Wed", 2},
+                                                              {"Thu", 3},
+                                                              {"Fri", 4},
+                                                              {"Sat", 5},
+                                                              {"Sun", 6}};
 const std::unordered_map<std::string, int> MONTH_TO_NUMBER = {{"Jan",  0},
                                                               {"Feb",  1},
                                                               {"Mar",  2},
@@ -74,8 +74,26 @@ void SetDate(struct tm &current_time) {
     printf("The system time is set to %s\n", text_time);
 }
 
+class Logger {
+public:
+    Logger(const std::string &filename) : filename_(filename) {}
+
+    void SendMessage(const std::string &message) {
+        std::string message_formatted = message + '\n';
+        std::thread thr([message_formatted, this]() {
+            std::ofstream os(filename_);
+            os << message_formatted;
+        });
+        thr.join();
+    }
+
+private:
+    std::string filename_;
+};
+
 int main(int argc, char *argv[]) {
-    std::ofstream os(argv[1]);
+    Logger log(argv[1]);
+
     CURL *curl;
     std::string readBuffer;
     curl = curl_easy_init();
@@ -90,7 +108,6 @@ int main(int argc, char *argv[]) {
         date = ParseDateFromResponse(readBuffer);
     }
     curl_easy_cleanup(curl);
-
     SetDate(date);
     return 0;
 }

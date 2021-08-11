@@ -99,6 +99,21 @@ void SetDate(struct tm &current_time, Logger &logger) {
     }
 }
 
+std::string Execute(const char *command, Logger &logger) {
+    char buffer[128];
+    std::string result{};
+    FILE *pipe = popen(command, "r");
+    if (!pipe) {
+        logger.SendMessage("Error while opening pipe.\n");
+    } else {
+        while (fgets(buffer, sizeof buffer, pipe) != nullptr) {
+            result += buffer;
+        }
+        logger.SendMessage(("String response made.\n"));
+        pclose(pipe);
+    }
+    return result;
+}
 
 int main(int argc, char *argv[]) {
     if (argc == 1) {
@@ -110,28 +125,13 @@ int main(int argc, char *argv[]) {
         gettimeofday(&systime, nullptr);
         logger.SendMessage("Current time on machine: " + std::string(ctime(&systime.tv_sec)));
 
-        CURL *curl;
-        std::string readBuffer;
-        curl = curl_easy_init();
-        std::string url = "http://google.com";
-        struct tm date{};
-        if (curl) {
-            curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-            logger.SendMessage("Made request to " + url + "\n");
-            curl_easy_setopt(curl, CURLOPT_HEADER, true);
-            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-            curl_easy_perform(curl);
-            date = ParseDateFromResponse(readBuffer, logger);
-        } else {
-            logger.SendMessage("Error while initializing curl to " + url + "\n");
-        }
-        curl_easy_cleanup(curl);
+        std::string response = Execute("curl -v http://google.com 2>&1", logger);
+        struct tm date = ParseDateFromResponse(response, logger);
         SetDate(date, logger);
 
-        curl = curl_easy_init();
-        url = "https://example.com";
-        readBuffer.erase();
+        CURL *curl = curl_easy_init();
+        std::string readBuffer;
+        std::string url = "https://example.com";
         if (curl) {
             curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);

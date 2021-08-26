@@ -59,7 +59,7 @@ void LoggerThread() {
         is_ready = false;
 
         std::ofstream os(filename, std::ios_base::out | std::ios_base::app);
-        std::cout << message;
+        os << message;
 
         is_processed = true;
         lock.unlock();
@@ -138,7 +138,8 @@ int main(int argc, char *argv[]) {
     if (argc == 1) {
         std::cout << "No filename was entered." << std::endl;
     } else {
-        filename = argv[0];
+        filename = argv[1];
+        std::cout << filename << std::endl;
         std::thread logger(LoggerThread);
         struct timeval systime{};
         gettimeofday(&systime, nullptr);
@@ -195,6 +196,7 @@ int main(int argc, char *argv[]) {
         } else {
             SendMessage(logger, "Error while initializing curl to " + url + "\n", true);
         }
+        logger.join();
     }
     return 0;
 }
